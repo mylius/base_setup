@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  ubuntu_ansible:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/home/zufall/base_setup
+    command: tail -F anything
+    container_name: ubuntu_ansible_container

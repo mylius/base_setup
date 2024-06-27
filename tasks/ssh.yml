@@ -1,0 +1,58 @@
+---
+- name: Ensure .ssh directory exists
+  file:
+    dest: "{{ dest_key | dirname }}"
+    mode: '0700'
+    state: directory
+  become: yes
+  become_user: "{{ user_name }}"
+  tags:
+    - dotfiles
+    - install
+    - ssh
+
+- name: Install private ssh key
+  copy:
+    src: "{{ source_key }}"
+    dest: "{{ dest_key }}"
+    mode: '0600'
+  become: yes
+  become_user: "{{ user_name }}"
+  tags:
+    - dotfiles
+    - install
+    - ssh
+
+- name: Install public ssh key
+  copy:
+    src: "{{ source_key }}.pub"
+    dest: "{{ dest_key }}.pub"
+    mode: '0644'
+  become: yes
+  become_user: "{{ user_name }}"
+  tags:
+    - dotfiles
+    - install
+    - ssh
+
+- name: Set authorized key from file
+  authorized_key:
+    user: "{{ user_name }}"
+    state: present
+    key: "{{ lookup('file', source_key + '.pub') }}"
+  tags:
+    - dotfiles
+    - install
+    - ssh
+
+- name: Ensure SSH agent is running and key is added
+  ansible.builtin.shell: |
+    eval "$(ssh-agent -s)"
+    ssh-add "{{ dest_key }}"
+  become: yes
+  become_user: "{{ user_name }}"
+  tags:
+    - dotfiles
+    - install
+    - ssh
+

@@ -1,0 +1,76 @@
+- name: Install nodejs and npm
+  become: true
+  apt:
+    name: ["nodejs", "npm"]
+  tags:
+    - install
+    - node
+
+- name: npmjs prefix
+  become_user: "{{ user_name }}"
+  shell: mkdir -p /home/{{ user_name }}/.local/.npm-global
+  tags:
+    - install
+    - node
+
+- name: add npmjs to path
+  become_user: "{{ user_name }}"
+  shell: PATH=/home/{{ user_name }}/.local/.npm-global/bin:$PATH
+  tags:
+    - install
+    - node
+
+- name: npmjs global settings
+  become_user: "{{ user_name }}"
+  shell: npm config set prefix '/home/{{ user_name }}/.local/.npm-global'
+  tags:
+    - install
+    - node
+
+- name: npmjs global settings export path in case I don't have dotfiles installed
+  become_user: "{{ user_name }}"
+  tags:
+    - node
+  shell: export PATH=/home/{{ user_name }}/.local/.npm-global/bin:$PATH
+  tags:
+    - install
+    - node
+    - npm-path
+
+- name: Download nvm installation script
+  become_user: "{{ user_name }}"
+  tags:
+    - node
+  get_url:
+    url: "https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh"
+    dest: "/home/{{ user_name }}/install_nvm.sh"
+    mode: '0755'
+
+- name: Run nvm installation script
+  become_user: "{{ user_name }}"
+  tags:
+    - node 
+  shell: "bash /home/{{ user_name }}/install_nvm.sh"
+  register: nvm_install_result
+  ignore_errors: yes
+
+- name: Load nvm and install Node.js
+  become_user: "{{ user_name }}"
+  tags:
+    - node
+  shell: |
+    . /home/{{ user_name }}/.nvm/nvm.sh
+    nvm install --lts
+    nvm alias default lts/*
+  args:
+    executable: /bin/bash
+
+- name: Ensure npm is installed
+  become_user: "{{ user_name }}"
+  tags:
+    - node
+  shell: |
+    . /home/{{ user_name }}/.nvm/nvm.sh
+    npm install -g npm
+  args:
+    executable: /bin/bash

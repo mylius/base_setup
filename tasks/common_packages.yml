@@ -1,0 +1,20 @@
+- name: Install common packages with apt
+  ansible.builtin.package:
+    name: "{{ common_packages }}"
+    state: present
+    manager: apt
+  when: ansible_facts.packages.apt is defined
+
+- name: Install common packages with pacman
+  ansible.builtin.package:
+    name: "{{ common_packages }}"
+    state: present
+    manager: pacman
+  when: ansible_facts.packages.pacman is defined
+
+- name: Install common packages with brew
+  homebrew:
+    name: "{{ common_packages }}"
+    state: present
+  when: ansible_facts.os_family == "Darwin" and brew_installed.stat.exists
+

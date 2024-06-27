@@ -1,0 +1,28 @@
+- name: Cloning .dotfiles
+  ansible.builtin.git:
+    repo: 'git@github.com:mylius/.dotfiles.git'
+    dest: "/home/{{ user_name }}/.dotfiles"
+    recursive: yes
+    update: yes
+    accept_hostkey: yes
+    version: main
+  become: yes   
+  become_user: zufall
+  environment:
+    GIT_SSH_COMMAND: 'ssh -i /home/zufall/.ssh/id_rsa -vvv'
+  tags:
+    - install
+    - dotfiles
+    - stow
+
+- name: Ensure ./linux script has execute permissions
+  ansible.builtin.file:
+    path: "/home/{{ user_name }}/.dotfiles/linux"
+    mode: 'u+x'
+  become: yes
+  become_user: zufall
+
+- name: Stow dotfiles
+  become: yes
+  become_user: zufall
+  shell: cd /home/{{ user_name }}/.dotfiles && ./linux

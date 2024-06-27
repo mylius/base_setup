@@ -1,0 +1,64 @@
+---
+- name: Setup development environment
+  hosts: localhost
+  become: yes
+
+  vars:
+    source_key: "./.ssh/id_rsa"
+    user_name: "{{ user_name }}"
+    dest_key: "/home/{{ user_name }}/.ssh/id_rsa"
+    common_packages:
+      - zsh
+      - tmux
+      - neovim
+      - jq
+      - fzf
+      - git
+      - curl
+      - build-essential
+      - libssl-dev
+      - figlet
+      - alacritty
+      - stow
+      - i3
+
+  pre_tasks:
+    - name: Determine the package manager
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - include_tasks: tasks/update_sources.yml
+      tags: 
+        - terminal
+        - install
+
+  tasks:
+  
+    - name: Install common packages with apt
+      ansible.builtin.package:
+        name: "{{ common_packages }}"
+        state: present
+        update_cache: yes
+      when: ansible_facts.packages.apt is defined
+
+    - include_tasks: tasks/ssh.yml
+      tags: ssh
+
+    - include_tasks: tasks/git_setup.yml
+      tags: install
+
+    - include_tasks: tasks/nvim.yml
+      tags: terminal
+
+    - include_tasks: tasks/zsh_setup.yml
+      tags: terminal
+
+    - include_tasks: tasks/dotfiles.yml
+      tags: dotfiles
+
+    - include_tasks: tasks/python.yml
+      tags: py
+
+    - include_tasks: tasks/node.yml
+      tags: node
+

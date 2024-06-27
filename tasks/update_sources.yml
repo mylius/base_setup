@@ -1,0 +1,24 @@
+- name: Update apt sources
+  ansible.builtin.apt:
+    update_cache: yes
+  when: ansible_facts.packages.apt is defined
+
+- name: Update pacman sources
+  ansible.builtin.pacman:
+    update_cache: yes
+  when: ansible_facts.packages.pacman is defined
+
+- name: Check if brew is installed
+  stat:
+    path: /usr/local/bin/brew
+  register: brew_installed
+  when: ansible_facts.os_family == "Darwin"
+
+- name: Install Homebrew on macOS
+  shell: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  when: ansible_facts.os_family == "Darwin" and not brew_installed.stat.exists
+
+- name: Update brew sources
+  command: brew update
+  when: ansible_facts.os_family == "Darwin" and brew_installed.stat.exists
+
