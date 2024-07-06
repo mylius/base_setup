@@ -7,6 +7,7 @@
     source_key: "./.ssh/id_rsa"
     user_name: "{{ user_name }}"
     dest_key: "/home/{{ user_name }}/.ssh/id_rsa"
+        # Common packages for all platforms
     common_packages:
       - zsh
       - tmux
@@ -15,31 +16,65 @@
       - fzf
       - git
       - curl
+      - figlet
+      - stow
+
+    # Debian/Ubuntu specific packages
+    apt_packages:
       - build-essential
       - libssl-dev
-      - figlet
-      - alacritty
-      - stow
       - i3
+      - alacritty
+
+    # Arch/Manjaro specific packages
+    pacman_packages:
+      - base-devel
+      - openssl
+      - i3-wm
+      - alacritty
+
+    # macOS specific packages
+    brew_packages:
+      - openssl
+      - alacritty
 
   pre_tasks:
-    - name: Determine the package manager
-      ansible.builtin.package_facts:
+    - name: Gather package facts
+      package_facts:
         manager: auto
+
+    - name: Check if Homebrew is installed
+      stat:
+        path: /usr/local/bin/brew
+      register: brew_installed
+      when: ansible_os_family == "Darwin"
 
     - include_tasks: tasks/update_sources.yml
       tags: 
         - terminal
         - install
+      when: ansible_os_family != "Darwin"
 
   tasks:
-  
-    - name: Install common packages with apt
-      ansible.builtin.package:
-        name: "{{ common_packages }}"
+    - name: Install common and specific packages with apt
+      apt:
+        name: "{{ common_packages + apt_packages }}"
         state: present
         update_cache: yes
       when: ansible_facts.packages.apt is defined
+
+    - name: Install common and specific packages with pacman
+      pacman:
+        name: "{{ common_packages + pacman_packages }}"
+        state: present
+        update_cache: yes
+      when: ansible_facts.packages.pacman is defined
+
+    - name: Install common and specific packages with Homebrew
+      homebrew:
+        name: "{{ common_packages + brew_packages }}"
+        state: present
+      when: ansible_os_family == "Darwin" and brew_installed.stat.exists
 
     - include_tasks: tasks/ssh.yml
       tags: ssh

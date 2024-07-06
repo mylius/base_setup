@@ -3,12 +3,38 @@
     name: user.email
     scope: global
     value: "jgmylius@posteo.de"
+  become: yes
+  become_user: "{{ user_name }}"
+  environment:
+    HOME: "/home/{{ user_name }}"
   tags:
-  - git-personal
+    - git-personal
+
 - name: Git personal setup name
   git_config:
     name: user.name
     scope: global
     value: "mylius"
+  become: yes
+  become_user: "{{ user_name }}"
+  environment:
+    HOME: "/home/{{ user_name }}"
   tags:
-  - git-personal
+    - git-personal
+
+- name: Verify Git configuration
+  command: git config --global --list
+  register: git_config_result
+  changed_when: false
+  become: yes
+  become_user: "{{ user_name }}"
+  environment:
+    HOME: "/home/{{ user_name }}"
+  tags:
+    - git-personal
+
+- name: Display Git configuration
+  debug:
+    var: git_config_result.stdout_lines
+  tags:
+    - git-personal

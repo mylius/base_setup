@@ -1,3 +1,12 @@
+- name: Check if .dotfiles directory exists
+  stat:
+    path: "/home/{{ user_name }}/.dotfiles"
+  register: dotfiles_dir
+  tags:
+    - install
+    - dotfiles
+    - stow
+
 - name: Cloning .dotfiles
   ansible.builtin.git:
     repo: 'git@github.com:mylius/.dotfiles.git'
@@ -7,9 +16,29 @@
     accept_hostkey: yes
     version: main
   become: yes   
-  become_user: zufall
+  become_user: "{{ user_name }}"
   environment:
-    GIT_SSH_COMMAND: 'ssh -i /home/zufall/.ssh/id_rsa -vvv'
+    GIT_SSH_COMMAND: 'ssh -i /home/{{ user_name }}/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  when: not dotfiles_dir.stat.exists
+  tags:
+    - install
+    - dotfiles
+    - stow
+
+- name: Update .dotfiles with git pull --rebase if already cloned
+  ansible.builtin.shell:
+    cmd: |
+      cd /home/{{ user_name }}/.dotfiles
+      git fetch
+      git pull --rebase origin main
+  become: yes
+  become_user: "{{ user_name }}"
+  environment:
+    GIT_SSH_COMMAND: 'ssh -i /home/{{ user_name }}/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  when: dotfiles_dir.stat.exists
+  register: git_pull_result
+  changed_when: git_pull_result.stdout != 'Already up to date.'
+  failed_when: git_pull_result.rc != 0 and 'CONFLICT' in git_pull_result.stderr
   tags:
     - install
     - dotfiles
@@ -20,9 +49,17 @@
     path: "/home/{{ user_name }}/.dotfiles/linux"
     mode: 'u+x'
   become: yes
-  become_user: zufall
+  become_user: "{{ user_name }}"
+  tags:
+    - install
+    - dotfiles
+    - stow
 
 - name: Stow dotfiles
   become: yes
-  become_user: zufall
+  become_user: "{{ user_name }}"
   shell: cd /home/{{ user_name }}/.dotfiles && ./linux
+  tags:
+    - install
+    - dotfiles
+    - stow
