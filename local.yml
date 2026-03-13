@@ -7,7 +7,16 @@
     source_key: "./.ssh/id_rsa"
     user_name: "{{ user_name }}"
     dest_key: "/home/{{ user_name }}/.ssh/id_rsa"
-        # Common packages for all platforms
+    lazygit_release_arch_map:
+      x86_64: x86_64
+      aarch64: arm64
+      arm64: arm64
+    atuin_release_target_map:
+      x86_64: x86_64-unknown-linux-gnu
+      aarch64: aarch64-unknown-linux-gnu
+      arm64: aarch64-unknown-linux-gnu
+
+    # Common packages for all platforms
     common_packages:
       - zsh
       - tmux
@@ -55,6 +64,27 @@
         - install
       when: ansible_os_family != "Darwin"
 
+    - name: Detect current login shell on Linux
+      command: getent passwd {{ user_name }}
+      register: linux_user_entry
+      changed_when: false
+      when: ansible_os_family != "Darwin"
+
+    - name: Detect current login shell on macOS
+      command: dscl . -read /Users/{{ user_name }} UserShell
+      register: darwin_user_shell
+      changed_when: false
+      when: ansible_os_family == "Darwin"
+
+    - name: Record current login shell
+      set_fact:
+        current_login_shell: >-
+          {{
+            linux_user_entry.stdout.split(':')[-1]
+            if ansible_os_family != 'Darwin'
+            else darwin_user_shell.stdout.split()[-1]
+          }}
+
   tasks:
     - name: Install common and specific packages with apt
       apt:
@@ -82,10 +112,23 @@
     - include_tasks: tasks/git_setup.yml
       tags: install
 
+    - include_tasks: tasks/cli_tools.yml
+      tags:
+        - install
+        - terminal
+
     - include_tasks: tasks/nvim.yml
       tags: terminal
 
+    - include_tasks: tasks/tmux_setup.yml
+      tags: terminal
+
     - include_tasks: tasks/zsh_setup.yml
+      when: current_login_shell | basename != "bash"
+      tags: terminal
+
+    - include_tasks: tasks/bash_setup.yml
+      when: current_login_shell | basename == "bash"
       tags: terminal
 
     - include_tasks: tasks/dotfiles.yml
@@ -96,4 +139,3 @@
 
     - include_tasks: tasks/node.yml
       tags: node
-

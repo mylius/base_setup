@@ -1,0 +1,33 @@
+- name: Ensure bash-preexec is available for atuin
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/rcaloras/bash-preexec/master/bash-preexec.sh
+    dest: "/home/{{ user_name }}/.bash-preexec.sh"
+    owner: "{{ user_name }}"
+    group: "{{ user_name }}"
+    mode: '0644'
+  become: yes
+  become_user: "{{ user_name }}"
+
+- name: Ensure .bashrc exists
+  ansible.builtin.file:
+    path: "/home/{{ user_name }}/.bashrc"
+    state: touch
+    owner: "{{ user_name }}"
+    group: "{{ user_name }}"
+    mode: '0644'
+  become: yes
+  become_user: "{{ user_name }}"
+
+- name: Ensure .bash_profile exists
+  ansible.builtin.copy:
+    dest: "/home/{{ user_name }}/.bash_profile"
+    content: |
+      if [ -f "$HOME/.bashrc" ]; then
+        . "$HOME/.bashrc"
+      fi
+    owner: "{{ user_name }}"
+    group: "{{ user_name }}"
+    mode: '0644'
+    force: false
+  become: yes
+  become_user: "{{ user_name }}"

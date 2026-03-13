@@ -1,6 +1,70 @@
-- name: Get Packer
+- name: Remove legacy packer install
+  ansible.builtin.file:
+    path: "/home/{{ user_name }}/.local/share/nvim/site/pack/packer/start/packer.nvim"
+    state: absent
   become: yes
   become_user: "{{ user_name }}"
+
+- name: Check if Neovim config is already a git checkout
+  ansible.builtin.stat:
+    path: "/home/{{ user_name }}/.config/nvim/.git"
+  register: nvim_git_dir
+  become: yes
+  become_user: "{{ user_name }}"
+
+- name: Read Neovim config origin
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "/home/{{ user_name }}/.config/nvim"
+      - remote
+      - get-url
+      - origin
+  register: nvim_origin
+  changed_when: false
+  failed_when: false
+  when: nvim_git_dir.stat.exists
+  become: yes
+  become_user: "{{ user_name }}"
+
+- name: Remove non-LazyVim Neovim config
+  ansible.builtin.file:
+    path: "/home/{{ user_name }}/.config/nvim"
+    state: absent
+  when: >
+    (not nvim_git_dir.stat.exists) or
+    (nvim_origin.stdout not in ['https://github.com/LazyVim/starter', 'https://github.com/LazyVim/starter.git', 'git@github.com:LazyVim/starter.git'])
+  become: yes
+  become_user: "{{ user_name }}"
+
+- name: Install LazyVim starter
   ansible.builtin.git:
-    repo: 'https://github.com/wbthomason/packer.nvim'
-    dest: "/home/{{ user_name }}/.local/share/nvim/site/pack/packer/start/packer.nvim"
+    repo: https://github.com/LazyVim/starter
+    dest: "/home/{{ user_name }}/.config/nvim"
+    update: yes
+  become: yes
+  become_user: "{{ user_name }}"
+
+- name: Ensure LazyVim plugin override directory exists
+  ansible.builtin.file:
+    path: "/home/{{ user_name }}/.config/nvim/lua/plugins"
+    state: directory
+    owner: "{{ user_name }}"
+    group: "{{ user_name }}"
+    mode: '0755'
+  become: yes
+  become_user: "{{ user_name }}"
+
+- name: Enable Harpoon in LazyVim
+  ansible.builtin.copy:
+    dest: "/home/{{ user_name }}/.config/nvim/lua/plugins/harpoon.lua"
+    owner: "{{ user_name }}"
+    group: "{{ user_name }}"
+    mode: '0644'
+    content: |
+      return {
+        { import = "lazyvim.plugins.extras.editor.harpoon2" },
+      }
+  become: yes
+  become_user: "{{ user_name }}"

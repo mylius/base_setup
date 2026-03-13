@@ -1,0 +1,17 @@
+- name: Ensure tmux plugin directory exists
+  ansible.builtin.file:
+    path: "/home/{{ user_name }}/.tmux/plugins"
+    state: directory
+    owner: "{{ user_name }}"
+    group: "{{ user_name }}"
+    mode: '0755'
+  become: yes
+  become_user: "{{ user_name }}"
+
+- name: Install tmux plugin manager
+  ansible.builtin.git:
+    repo: https://github.com/tmux-plugins/tpm
+    dest: "/home/{{ user_name }}/.tmux/plugins/tpm"
+    update: yes
+  become: yes
+  become_user: "{{ user_name }}"

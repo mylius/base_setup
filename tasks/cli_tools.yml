@@ -1,0 +1,69 @@
+- name: Install atuin with pacman
+  ansible.builtin.pacman:
+    name: atuin
+    state: present
+    update_cache: yes
+  when: ansible_facts.packages.pacman is defined
+
+- name: Install atuin with Homebrew
+  homebrew:
+    name: atuin
+    state: present
+  when: ansible_os_family == "Darwin" and brew_installed.stat.exists
+
+- name: Check if atuin is already installed on apt-based systems
+  ansible.builtin.command: atuin --version
+  register: atuin_installed
+  changed_when: false
+  failed_when: false
+  when: ansible_facts.packages.apt is defined
+
+- name: Install atuin from the latest GitHub release on apt-based systems
+  ansible.builtin.shell: |
+    set -euo pipefail
+    version=$(curl -fsSL https://api.github.com/repos/atuinsh/atuin/releases/latest | jq -r '.tag_name')
+    tmpdir=$(mktemp -d)
+    curl -fsSL -o "$tmpdir/atuin.tar.gz" "https://github.com/atuinsh/atuin/releases/download/${version}/atuin-{{ atuin_release_target_map.get(ansible_architecture, 'x86_64-unknown-linux-gnu') }}.tar.gz"
+    tar -xzf "$tmpdir/atuin.tar.gz" -C "$tmpdir" atuin
+    install -m 0755 "$tmpdir/atuin" /usr/local/bin/atuin
+    rm -rf "$tmpdir"
+  args:
+    executable: /bin/bash
+  when:
+    - ansible_facts.packages.apt is defined
+    - atuin_installed.rc != 0
+
+- name: Install lazygit with pacman
+  ansible.builtin.pacman:
+    name: lazygit
+    state: present
+    update_cache: yes
+  when: ansible_facts.packages.pacman is defined
+
+- name: Install lazygit with Homebrew
+  homebrew:
+    name: lazygit
+    state: present
+  when: ansible_os_family == "Darwin" and brew_installed.stat.exists
+
+- name: Check if lazygit is already installed on apt-based systems
+  ansible.builtin.command: lazygit --version
+  register: lazygit_installed
+  changed_when: false
+  failed_when: false
+  when: ansible_facts.packages.apt is defined
+
+- name: Install lazygit from the latest GitHub release on apt-based systems
+  ansible.builtin.shell: |
+    set -euo pipefail
+    version=$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest | jq -r '.tag_name | ltrimstr("v")')
+    tmpdir=$(mktemp -d)
+    curl -fsSL -o "$tmpdir/lazygit.tar.gz" "https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_{{ lazygit_release_arch_map.get(ansible_architecture, 'x86_64') }}.tar.gz"
+    tar -xzf "$tmpdir/lazygit.tar.gz" -C "$tmpdir" lazygit
+    install -m 0755 "$tmpdir/lazygit" /usr/local/bin/lazygit
+    rm -rf "$tmpdir"
+  args:
+    executable: /bin/bash
+  when:
+    - ansible_facts.packages.apt is defined
+    - lazygit_installed.rc != 0
