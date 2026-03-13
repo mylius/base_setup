@@ -17,7 +17,7 @@
     version: main
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
-  environment: "{{ dotfiles_git_environment if (bootstrap_ssh | bool) else {} }}"
+  environment: "{{ {'HOME': '/home/' ~ user_name} | combine(dotfiles_git_environment if (bootstrap_ssh | bool) else {}) }}"
   when: not dotfiles_dir.stat.exists
   tags:
     - install
@@ -32,11 +32,11 @@
       git pull --rebase origin main
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
-  environment: "{{ dotfiles_git_environment if (bootstrap_ssh | bool) else {} }}"
+  environment: "{{ {'HOME': '/home/' ~ user_name} | combine(dotfiles_git_environment if (bootstrap_ssh | bool) else {}) }}"
   when: dotfiles_dir.stat.exists
   register: git_pull_result
   changed_when: git_pull_result.stdout != 'Already up to date.'
-  failed_when: git_pull_result.rc != 0 and 'CONFLICT' in git_pull_result.stderr
+  failed_when: git_pull_result.rc != 0
   tags:
     - install
     - dotfiles
@@ -45,7 +45,7 @@
 - name: Ensure ./linux script has execute permissions
   ansible.builtin.file:
     path: "/home/{{ user_name }}/.dotfiles/linux"
-    mode: 'u+x'
+    mode: '0755'
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   tags:
@@ -57,6 +57,9 @@
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   shell: cd /home/{{ user_name }}/.dotfiles && ./linux
+  environment:
+    HOME: "/home/{{ user_name }}"
+    DOTFILES: "/home/{{ user_name }}/.dotfiles"
   tags:
     - install
     - dotfiles
