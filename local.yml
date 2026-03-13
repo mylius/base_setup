@@ -21,6 +21,10 @@
       x86_64: x86_64-unknown-linux-gnu
       aarch64: aarch64-unknown-linux-gnu
       arm64: aarch64-unknown-linux-gnu
+    miniforge_installer_map:
+      x86_64: Miniforge3-Linux-x86_64.sh
+      aarch64: Miniforge3-Linux-aarch64.sh
+      arm64: Miniforge3-Linux-aarch64.sh
 
     # Common packages for all platforms
     common_packages:
