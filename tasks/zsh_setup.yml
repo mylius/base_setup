@@ -5,27 +5,12 @@
   tags: terminal
 
 - name: Install oh-my-zsh
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   shell: |
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
   args:
     creates: "/home/{{ user_name }}/.oh-my-zsh"
-
-- name: Ensure .zshrc exists
-  copy:
-    src: "/home/{{ user_name }}/.oh-my-zsh/templates/zshrc.zsh-template"
-    dest: "/home/{{ user_name }}/.zshrc"
-    remote_src: yes
-    owner: "{{ user_name }}"
-    group: "{{ user_name }}"
-    mode: '0644'
-
-- name: Source .zshrc
-  become_user: "{{ user_name }}"
-  shell: |
-    source ~/.zshrc
-  args:
-    executable: /bin/zsh
 
 - name: Ensure zsh plugin directory exists
   ansible.builtin.file:
