@@ -213,3 +213,37 @@
     - lazygit_installed.rc != 0
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
+
+- name: Install starship with pacman
+  ansible.builtin.pacman:
+    name: starship
+    state: present
+    update_cache: yes
+  when:
+    - bootstrap_become | bool
+    - ansible_facts.packages.pacman is defined
+
+- name: Install starship with Homebrew
+  homebrew:
+    name: starship
+    state: present
+  when: ansible_os_family == "Darwin" and brew_installed.stat.exists
+
+- name: Check if starship is already installed on apt-based systems
+  ansible.builtin.command: starship --version
+  register: starship_installed
+  changed_when: false
+  failed_when: false
+  when: ansible_facts.packages.apt is defined
+
+- name: Install starship with official installer on apt-based systems
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "{{ cli_install_dir }}"
+  args:
+    executable: /bin/bash
+  when:
+    - ansible_facts.packages.apt is defined
+    - starship_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"

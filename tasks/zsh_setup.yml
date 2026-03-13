@@ -1,17 +1,3 @@
-- name: Check that the somefile.conf exists
-  stat:
-    path: "/home/{{ user_name }}/.oh-my-zsh"
-  register: oh_my_stats
-  tags: terminal
-
-- name: Install oh-my-zsh
-  become: "{{ bootstrap_become | bool }}"
-  become_user: "{{ user_name }}"
-  shell: |
-    RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-  args:
-    creates: "/home/{{ user_name }}/.oh-my-zsh"
-
 - name: Ensure zsh plugin directory exists
   ansible.builtin.file:
     path: "/home/{{ user_name }}/.zsh"
@@ -19,6 +5,13 @@
     owner: "{{ user_name }}"
     group: "{{ user_name }}"
     mode: '0755'
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Remove oh-my-zsh if present
+  ansible.builtin.file:
+    path: "/home/{{ user_name }}/.oh-my-zsh"
+    state: absent
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
