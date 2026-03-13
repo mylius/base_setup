@@ -5,7 +5,7 @@
     owner: "{{ user_name }}"
     group: "{{ user_name }}"
     mode: '0644'
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Ensure .bashrc exists
@@ -15,7 +15,7 @@
     owner: "{{ user_name }}"
     group: "{{ user_name }}"
     mode: '0644'
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Ensure .bash_profile exists
@@ -29,5 +29,5 @@
     group: "{{ user_name }}"
     mode: '0644'
     force: false
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"

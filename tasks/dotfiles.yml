@@ -15,7 +15,7 @@
     update: yes
     accept_hostkey: yes
     version: main
-  become: yes   
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   environment:
     GIT_SSH_COMMAND: 'ssh -i /home/{{ user_name }}/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
@@ -31,7 +31,7 @@
       cd /home/{{ user_name }}/.dotfiles
       git fetch
       git pull --rebase origin main
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   environment:
     GIT_SSH_COMMAND: 'ssh -i /home/{{ user_name }}/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
@@ -48,7 +48,7 @@
   ansible.builtin.file:
     path: "/home/{{ user_name }}/.dotfiles/linux"
     mode: 'u+x'
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   tags:
     - install
@@ -56,7 +56,7 @@
     - stow
 
 - name: Stow dotfiles
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   shell: cd /home/{{ user_name }}/.dotfiles && ./linux
   tags:

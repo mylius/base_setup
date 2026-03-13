@@ -4,7 +4,7 @@
     dest: "{{ dest_key | dirname }}"
     mode: '0700'
     state: directory
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   tags:
     - dotfiles
@@ -16,7 +16,7 @@
     src: "{{ source_key }}"
     dest: "{{ dest_key }}"
     mode: '0600'
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   tags:
     - dotfiles
@@ -28,7 +28,7 @@
     src: "{{ source_key }}.pub"
     dest: "{{ dest_key }}.pub"
     mode: '0644'
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   tags:
     - dotfiles
@@ -49,10 +49,9 @@
   ansible.builtin.shell: |
     eval "$(ssh-agent -s)"
     ssh-add "{{ dest_key }}"
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   tags:
     - dotfiles
     - install
     - ssh
-

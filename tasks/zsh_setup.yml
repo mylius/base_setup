@@ -1,6 +1,6 @@
 - name: Check that the somefile.conf exists
   stat:
-    path: ~/.oh-my-zsh
+    path: "/home/{{ user_name }}/.oh-my-zsh"
   register: oh_my_stats
   tags: terminal
 
@@ -34,7 +34,7 @@
     owner: "{{ user_name }}"
     group: "{{ user_name }}"
     mode: '0755'
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Install zsh-autosuggestions
@@ -42,7 +42,7 @@
     repo: https://github.com/zsh-users/zsh-autosuggestions.git
     dest: "/home/{{ user_name }}/.zsh/zsh-autosuggestions"
     update: yes
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Install zsh-syntax-highlighting
@@ -50,5 +50,5 @@
     repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
     dest: "/home/{{ user_name }}/.zsh/zsh-syntax-highlighting"
     update: yes
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"

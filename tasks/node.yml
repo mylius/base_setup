@@ -1,19 +1,23 @@
 - name: Install nodejs and npm (Debian/Ubuntu)
-  become: true
+  become: "{{ bootstrap_become | bool }}"
   apt:
     name: ["nodejs", "npm"]
     update_cache: yes
-  when: ansible_facts.packages.apt is defined
+  when:
+    - bootstrap_become | bool
+    - ansible_facts.packages.apt is defined
   tags:
     - install
     - node
 
 - name: Install nodejs and npm (Arch/Manjaro)
-  become: true
+  become: "{{ bootstrap_become | bool }}"
   pacman:
     name: ["nodejs", "npm"]
     update_cache: yes
-  when: ansible_facts.packages.pacman is defined
+  when:
+    - bootstrap_become | bool
+    - ansible_facts.packages.pacman is defined
   tags:
     - install
     - node
@@ -29,24 +33,30 @@
 
 - name: Create npmjs prefix directory
   file:
-    path: "{{ ansible_env.HOME }}/.local/.npm-global"
+    path: "/home/{{ user_name }}/.local/.npm-global"
     state: directory
     mode: '0755'
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
   tags:
     - install
     - node
 
 - name: Set npmjs global prefix
-  shell: npm config set prefix '{{ ansible_env.HOME }}/.local/.npm-global'
+  shell: npm config set prefix '/home/{{ user_name }}/.local/.npm-global'
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
   tags:
     - install
     - node
 
 - name: Add npmjs to PATH
   lineinfile:
-    path: "{{ ansible_env.HOME }}/.bashrc"
-    line: 'export PATH={{ ansible_env.HOME }}/.local/.npm-global/bin:$PATH'
+    path: "/home/{{ user_name }}/.bashrc"
+    line: 'export PATH=/home/{{ user_name }}/.local/.npm-global/bin:$PATH'
     create: yes
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
   tags:
     - install
     - node
@@ -55,33 +65,41 @@
 - name: Download nvm installation script
   get_url:
     url: "https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh"
-    dest: "{{ ansible_env.HOME }}/install_nvm.sh"
+    dest: "/home/{{ user_name }}/install_nvm.sh"
     mode: '0755'
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
   tags:
     - node
 
 - name: Run nvm installation script
-  shell: "bash {{ ansible_env.HOME }}/install_nvm.sh"
+  shell: "bash /home/{{ user_name }}/install_nvm.sh"
   register: nvm_install_result
   ignore_errors: yes
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
   tags:
     - node 
 
 - name: Load nvm and install Node.js
   shell: |
-    . {{ ansible_env.HOME }}/.nvm/nvm.sh
+    . /home/{{ user_name }}/.nvm/nvm.sh
     nvm install --lts
     nvm alias default lts/*
   args:
     executable: /bin/bash
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
   tags:
     - node
 
 - name: Ensure npm is installed
   shell: |
-    . {{ ansible_env.HOME }}/.nvm/nvm.sh
+    . /home/{{ user_name }}/.nvm/nvm.sh
     npm install -g npm
   args:
     executable: /bin/bash
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
   tags:
     - node

@@ -3,7 +3,7 @@
     name: user.email
     scope: global
     value: "jgmylius@posteo.de"
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   environment:
     HOME: "/home/{{ user_name }}"
@@ -15,7 +15,7 @@
     name: user.name
     scope: global
     value: "mylius"
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   environment:
     HOME: "/home/{{ user_name }}"
@@ -26,7 +26,7 @@
   command: git config --global --list
   register: git_config_result
   changed_when: false
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   environment:
     HOME: "/home/{{ user_name }}"

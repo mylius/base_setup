@@ -5,7 +5,7 @@
     owner: "{{ user_name }}"
     group: "{{ user_name }}"
     mode: '0755'
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Install tmux plugin manager
@@ -13,5 +13,5 @@
     repo: https://github.com/tmux-plugins/tpm
     dest: "/home/{{ user_name }}/.tmux/plugins/tpm"
     update: yes
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"

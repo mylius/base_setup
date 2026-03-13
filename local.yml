@@ -1,12 +1,14 @@
 ---
 - name: Setup development environment
   hosts: localhost
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
 
   vars:
     source_key: "./.ssh/id_rsa"
     user_name: "{{ user_name }}"
+    bootstrap_become: false
     dest_key: "/home/{{ user_name }}/.ssh/id_rsa"
+    cli_install_dir: "/home/{{ user_name }}/.local/bin"
     lazygit_release_arch_map:
       x86_64: x86_64
       aarch64: arm64
@@ -91,14 +93,18 @@
         name: "{{ common_packages + apt_packages }}"
         state: present
         update_cache: yes
-      when: ansible_facts.packages.apt is defined
+      when:
+        - bootstrap_become | bool
+        - ansible_facts.packages.apt is defined
 
     - name: Install common and specific packages with pacman
       pacman:
         name: "{{ common_packages + pacman_packages }}"
         state: present
         update_cache: yes
-      when: ansible_facts.packages.pacman is defined
+      when:
+        - bootstrap_become | bool
+        - ansible_facts.packages.pacman is defined
 
     - name: Install common and specific packages with Homebrew
       homebrew:

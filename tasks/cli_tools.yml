@@ -1,9 +1,23 @@
+- name: Ensure user-local bin exists for non-privileged installs
+  ansible.builtin.file:
+    path: "{{ cli_install_dir }}"
+    state: directory
+    owner: "{{ user_name }}"
+    group: "{{ user_name }}"
+    mode: '0755'
+  when:
+    - ansible_facts.packages.apt is defined
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
 - name: Install atuin with pacman
   ansible.builtin.pacman:
     name: atuin
     state: present
     update_cache: yes
-  when: ansible_facts.packages.pacman is defined
+  when:
+    - bootstrap_become | bool
+    - ansible_facts.packages.pacman is defined
 
 - name: Install atuin with Homebrew
   homebrew:
@@ -25,20 +39,24 @@
     tmpdir=$(mktemp -d)
     curl -fsSL -o "$tmpdir/atuin.tar.gz" "https://github.com/atuinsh/atuin/releases/download/${version}/atuin-{{ atuin_release_target_map.get(ansible_architecture, 'x86_64-unknown-linux-gnu') }}.tar.gz"
     tar -xzf "$tmpdir/atuin.tar.gz" -C "$tmpdir" atuin
-    install -m 0755 "$tmpdir/atuin" /usr/local/bin/atuin
+    install -m 0755 "$tmpdir/atuin" "{{ cli_install_dir }}/atuin"
     rm -rf "$tmpdir"
   args:
     executable: /bin/bash
   when:
     - ansible_facts.packages.apt is defined
     - atuin_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
 
 - name: Install lazygit with pacman
   ansible.builtin.pacman:
     name: lazygit
     state: present
     update_cache: yes
-  when: ansible_facts.packages.pacman is defined
+  when:
+    - bootstrap_become | bool
+    - ansible_facts.packages.pacman is defined
 
 - name: Install lazygit with Homebrew
   homebrew:
@@ -60,10 +78,12 @@
     tmpdir=$(mktemp -d)
     curl -fsSL -o "$tmpdir/lazygit.tar.gz" "https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_{{ lazygit_release_arch_map.get(ansible_architecture, 'x86_64') }}.tar.gz"
     tar -xzf "$tmpdir/lazygit.tar.gz" -C "$tmpdir" lazygit
-    install -m 0755 "$tmpdir/lazygit" /usr/local/bin/lazygit
+    install -m 0755 "$tmpdir/lazygit" "{{ cli_install_dir }}/lazygit"
     rm -rf "$tmpdir"
   args:
     executable: /bin/bash
   when:
     - ansible_facts.packages.apt is defined
     - lazygit_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"

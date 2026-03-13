@@ -2,14 +2,14 @@
   ansible.builtin.file:
     path: "/home/{{ user_name }}/.local/share/nvim/site/pack/packer/start/packer.nvim"
     state: absent
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Check if Neovim config is already a git checkout
   ansible.builtin.stat:
     path: "/home/{{ user_name }}/.config/nvim/.git"
   register: nvim_git_dir
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Read Neovim config origin
@@ -25,7 +25,7 @@
   changed_when: false
   failed_when: false
   when: nvim_git_dir.stat.exists
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Remove non-LazyVim Neovim config
@@ -35,7 +35,7 @@
   when: >
     (not nvim_git_dir.stat.exists) or
     (nvim_origin.stdout not in ['https://github.com/LazyVim/starter', 'https://github.com/LazyVim/starter.git', 'git@github.com:LazyVim/starter.git'])
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Install LazyVim starter
@@ -43,7 +43,7 @@
     repo: https://github.com/LazyVim/starter
     dest: "/home/{{ user_name }}/.config/nvim"
     update: yes
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Ensure LazyVim plugin override directory exists
@@ -53,7 +53,7 @@
     owner: "{{ user_name }}"
     group: "{{ user_name }}"
     mode: '0755'
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
 - name: Enable Harpoon in LazyVim
@@ -66,5 +66,5 @@
       return {
         { import = "lazyvim.plugins.extras.editor.harpoon2" },
       }
-  become: yes
+  become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
