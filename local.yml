@@ -7,8 +7,12 @@
     source_key: "./.ssh/id_rsa"
     user_name: "{{ user_name }}"
     bootstrap_become: false
+    bootstrap_ssh: false
     dest_key: "/home/{{ user_name }}/.ssh/id_rsa"
     cli_install_dir: "/home/{{ user_name }}/.local/bin"
+    dotfiles_repo: "https://github.com/mylius/.dotfiles.git"
+    dotfiles_git_environment:
+      GIT_SSH_COMMAND: "ssh -i /home/{{ user_name }}/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
     lazygit_release_arch_map:
       x86_64: x86_64
       aarch64: arm64
@@ -113,6 +117,7 @@
       when: ansible_os_family == "Darwin" and brew_installed.stat.exists
 
     - include_tasks: tasks/ssh.yml
+      when: bootstrap_ssh | bool
       tags: ssh
 
     - include_tasks: tasks/git_setup.yml

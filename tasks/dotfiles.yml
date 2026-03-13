@@ -9,7 +9,7 @@
 
 - name: Cloning .dotfiles
   ansible.builtin.git:
-    repo: 'git@github.com:mylius/.dotfiles.git'
+    repo: "{{ dotfiles_repo }}"
     dest: "/home/{{ user_name }}/.dotfiles"
     recursive: yes
     update: yes
@@ -17,8 +17,7 @@
     version: main
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
-  environment:
-    GIT_SSH_COMMAND: 'ssh -i /home/{{ user_name }}/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  environment: "{{ dotfiles_git_environment if (bootstrap_ssh | bool) else {} }}"
   when: not dotfiles_dir.stat.exists
   tags:
     - install
@@ -33,8 +32,7 @@
       git pull --rebase origin main
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
-  environment:
-    GIT_SSH_COMMAND: 'ssh -i /home/{{ user_name }}/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  environment: "{{ dotfiles_git_environment if (bootstrap_ssh | bool) else {} }}"
   when: dotfiles_dir.stat.exists
   register: git_pull_result
   changed_when: git_pull_result.stdout != 'Already up to date.'
