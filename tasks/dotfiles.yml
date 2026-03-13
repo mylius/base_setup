@@ -7,7 +7,27 @@
     - dotfiles
     - stow
 
-- name: Cloning .dotfiles
+- name: Check whether .dotfiles has local changes
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "/home/{{ user_name }}/.dotfiles"
+      - status
+      - --porcelain
+  register: dotfiles_status
+  changed_when: false
+  when: dotfiles_dir.stat.exists
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+  environment:
+    HOME: "/home/{{ user_name }}"
+  tags:
+    - install
+    - dotfiles
+    - stow
+
+- name: Clone .dotfiles when absent
   ansible.builtin.git:
     repo: "{{ dotfiles_repo }}"
     dest: "/home/{{ user_name }}/.dotfiles"
@@ -24,19 +44,31 @@
     - dotfiles
     - stow
 
-- name: Update .dotfiles with git pull --rebase if already cloned
-  ansible.builtin.shell:
-    cmd: |
-      cd /home/{{ user_name }}/.dotfiles
-      git fetch
-      git pull --rebase origin main
+- name: Update .dotfiles when checkout is clean
+  ansible.builtin.git:
+    repo: "{{ dotfiles_repo }}"
+    dest: "/home/{{ user_name }}/.dotfiles"
+    recursive: yes
+    update: yes
+    accept_hostkey: yes
+    version: main
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   environment: "{{ {'HOME': '/home/' ~ user_name} | combine(dotfiles_git_environment if (bootstrap_ssh | bool) else {}) }}"
-  when: dotfiles_dir.stat.exists
-  register: git_pull_result
-  changed_when: git_pull_result.stdout != 'Already up to date.'
-  failed_when: git_pull_result.rc != 0
+  when:
+    - dotfiles_dir.stat.exists
+    - dotfiles_status.stdout == ""
+  tags:
+    - install
+    - dotfiles
+    - stow
+
+- name: Skip .dotfiles update when checkout has local changes
+  ansible.builtin.debug:
+    msg: "Skipping .dotfiles update because the checkout has local changes."
+  when:
+    - dotfiles_dir.stat.exists
+    - dotfiles_status.stdout != ""
   tags:
     - install
     - dotfiles
