@@ -32,17 +32,80 @@
   failed_when: false
   when: ansible_facts.packages.apt is defined
 
-- name: Install atuin from the latest GitHub release on apt-based systems
-  ansible.builtin.shell: |
-    set -euo pipefail
-    version=$(curl -fsSL https://api.github.com/repos/atuinsh/atuin/releases/latest | jq -r '.tag_name')
-    tmpdir=$(mktemp -d)
-    curl -fsSL -o "$tmpdir/atuin.tar.gz" "https://github.com/atuinsh/atuin/releases/download/${version}/atuin-{{ atuin_release_target_map.get(ansible_architecture, 'x86_64-unknown-linux-gnu') }}.tar.gz"
-    tar -xzf "$tmpdir/atuin.tar.gz" -C "$tmpdir" atuin
-    install -m 0755 "$tmpdir/atuin" "{{ cli_install_dir }}/atuin"
-    rm -rf "$tmpdir"
-  args:
-    executable: /bin/bash
+- name: Fetch latest atuin release metadata
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/atuinsh/atuin/releases/latest
+    return_content: true
+  register: atuin_release
+  when:
+    - ansible_facts.packages.apt is defined
+    - atuin_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Create temporary directory for atuin install
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: atuin
+  register: atuin_tmpdir
+  when:
+    - ansible_facts.packages.apt is defined
+    - atuin_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Download atuin release archive
+  ansible.builtin.get_url:
+    url: "https://github.com/atuinsh/atuin/releases/download/{{ atuin_release.json.tag_name }}/atuin-{{ atuin_release_target_map.get(ansible_architecture, 'x86_64-unknown-linux-gnu') }}.tar.gz"
+    dest: "{{ atuin_tmpdir.path }}/atuin.tar.gz"
+    mode: '0644'
+  when:
+    - ansible_facts.packages.apt is defined
+    - atuin_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Extract atuin release archive
+  ansible.builtin.unarchive:
+    src: "{{ atuin_tmpdir.path }}/atuin.tar.gz"
+    dest: "{{ atuin_tmpdir.path }}"
+    remote_src: true
+  when:
+    - ansible_facts.packages.apt is defined
+    - atuin_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Find atuin binary in extracted archive
+  ansible.builtin.find:
+    paths: "{{ atuin_tmpdir.path }}"
+    patterns: atuin
+    file_type: file
+    recurse: true
+  register: atuin_binary
+  when:
+    - ansible_facts.packages.apt is defined
+    - atuin_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install atuin binary from extracted archive
+  ansible.builtin.copy:
+    src: "{{ atuin_binary.files[0].path }}"
+    dest: "{{ cli_install_dir }}/atuin"
+    remote_src: true
+    mode: '0755'
+  when:
+    - ansible_facts.packages.apt is defined
+    - atuin_installed.rc != 0
+    - atuin_binary.matched > 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Clean up atuin temporary directory
+  ansible.builtin.file:
+    path: "{{ atuin_tmpdir.path }}"
+    state: absent
   when:
     - ansible_facts.packages.apt is defined
     - atuin_installed.rc != 0
@@ -71,17 +134,80 @@
   failed_when: false
   when: ansible_facts.packages.apt is defined
 
-- name: Install lazygit from the latest GitHub release on apt-based systems
-  ansible.builtin.shell: |
-    set -euo pipefail
-    version=$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest | jq -r '.tag_name | ltrimstr("v")')
-    tmpdir=$(mktemp -d)
-    curl -fsSL -o "$tmpdir/lazygit.tar.gz" "https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_{{ lazygit_release_arch_map.get(ansible_architecture, 'x86_64') }}.tar.gz"
-    tar -xzf "$tmpdir/lazygit.tar.gz" -C "$tmpdir" lazygit
-    install -m 0755 "$tmpdir/lazygit" "{{ cli_install_dir }}/lazygit"
-    rm -rf "$tmpdir"
-  args:
-    executable: /bin/bash
+- name: Fetch latest lazygit release metadata
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/jesseduffield/lazygit/releases/latest
+    return_content: true
+  register: lazygit_release
+  when:
+    - ansible_facts.packages.apt is defined
+    - lazygit_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Create temporary directory for lazygit install
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: lazygit
+  register: lazygit_tmpdir
+  when:
+    - ansible_facts.packages.apt is defined
+    - lazygit_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Download lazygit release archive
+  ansible.builtin.get_url:
+    url: "https://github.com/jesseduffield/lazygit/releases/download/{{ lazygit_release.json.tag_name }}/lazygit_{{ lazygit_release.json.tag_name | regex_replace('^v', '') }}_Linux_{{ lazygit_release_arch_map.get(ansible_architecture, 'x86_64') }}.tar.gz"
+    dest: "{{ lazygit_tmpdir.path }}/lazygit.tar.gz"
+    mode: '0644'
+  when:
+    - ansible_facts.packages.apt is defined
+    - lazygit_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Extract lazygit release archive
+  ansible.builtin.unarchive:
+    src: "{{ lazygit_tmpdir.path }}/lazygit.tar.gz"
+    dest: "{{ lazygit_tmpdir.path }}"
+    remote_src: true
+  when:
+    - ansible_facts.packages.apt is defined
+    - lazygit_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Find lazygit binary in extracted archive
+  ansible.builtin.find:
+    paths: "{{ lazygit_tmpdir.path }}"
+    patterns: lazygit
+    file_type: file
+    recurse: true
+  register: lazygit_binary
+  when:
+    - ansible_facts.packages.apt is defined
+    - lazygit_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install lazygit binary from extracted archive
+  ansible.builtin.copy:
+    src: "{{ lazygit_binary.files[0].path }}"
+    dest: "{{ cli_install_dir }}/lazygit"
+    remote_src: true
+    mode: '0755'
+  when:
+    - ansible_facts.packages.apt is defined
+    - lazygit_installed.rc != 0
+    - lazygit_binary.matched > 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Clean up lazygit temporary directory
+  ansible.builtin.file:
+    path: "{{ lazygit_tmpdir.path }}"
+    state: absent
   when:
     - ansible_facts.packages.apt is defined
     - lazygit_installed.rc != 0
