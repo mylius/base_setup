@@ -74,21 +74,117 @@
     - dotfiles
     - stow
 
-- name: Ensure ./linux script has execute permissions
-  ansible.builtin.file:
-    path: "/home/{{ user_name }}/.dotfiles/linux"
-    mode: '0755'
+- name: Install dotfiles with stow or built-in fallback
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
-  tags:
-    - install
-    - dotfiles
-    - stow
+  ansible.builtin.shell: |
+    set -euo pipefail
 
-- name: Stow dotfiles
-  become: "{{ bootstrap_become | bool }}"
-  become_user: "{{ user_name }}"
-  shell: cd /home/{{ user_name }}/.dotfiles && ./linux
+    DOTFILES_DIR="/home/{{ user_name }}/.dotfiles"
+    STOW_FOLDERS="bin bash i3 tmux zsh xmodmap env alacritty"
+    BACKUP_DIR=""
+
+    backup_target() {
+      local target=$1
+      local rel backup_path
+
+      rel=${target#"$HOME"/}
+      rel=${rel#/}
+
+      if [[ -z "$BACKUP_DIR" ]]; then
+        BACKUP_DIR="$HOME/.dotfiles-backups/$(date +%Y%m%d%H%M%S)"
+        mkdir -p "$BACKUP_DIR"
+        echo "backing up conflicting files to $BACKUP_DIR" >&2
+      fi
+
+      backup_path="$BACKUP_DIR/$rel"
+      mkdir -p "$(dirname "$backup_path")"
+      mv "$target" "$backup_path"
+      echo "backup $rel"
+    }
+
+    prepare_targets() {
+      local folder=$1
+      local source_root="$DOTFILES_DIR/$folder"
+      local source_path rel target
+
+      while IFS= read -r -d '' source_path; do
+        rel=${source_path#"$source_root"/}
+        target="$HOME/$rel"
+
+        if [[ ( -e "$target" || -L "$target" ) && ! -d "$target" ]]; then
+          backup_target "$target"
+        fi
+
+        mkdir -p "$target"
+      done < <(find "$source_root" -mindepth 1 -type d -print0 | sort -z)
+
+      while IFS= read -r -d '' source_path; do
+        rel=${source_path#"$source_root"/}
+        target="$HOME/$rel"
+
+        if [[ -L "$target" && "$(readlink "$target")" == "$source_path" ]]; then
+          continue
+        fi
+
+        if [[ -e "$target" || -L "$target" ]]; then
+          backup_target "$target"
+        fi
+      done < <(find "$source_root" -mindepth 1 ! -type d -print0 | sort -z)
+    }
+
+    link_with_fallback() {
+      local folder=$1
+      local source_root="$DOTFILES_DIR/$folder"
+      local source_path rel target
+
+      while IFS= read -r -d '' source_path; do
+        rel=${source_path#"$source_root"/}
+        target="$HOME/$rel"
+        mkdir -p "$target"
+      done < <(find "$source_root" -mindepth 1 -type d -print0 | sort -z)
+
+      while IFS= read -r -d '' source_path; do
+        rel=${source_path#"$source_root"/}
+        target="$HOME/$rel"
+
+        if [[ -L "$target" && "$(readlink "$target")" == "$source_path" ]]; then
+          continue
+        fi
+
+        if [[ -L "$target" ]]; then
+          echo "cannot link $rel: target symlink points elsewhere at $target" >&2
+          exit 1
+        fi
+
+        if [[ -e "$target" ]]; then
+          echo "cannot link $rel: target exists at $target" >&2
+          exit 1
+        fi
+
+        mkdir -p "$(dirname "$target")"
+        ln -s "$source_path" "$target"
+        echo "link $rel"
+      done < <(find "$source_root" -mindepth 1 ! -type d -print0 | sort -z)
+    }
+
+    if command -v stow >/dev/null 2>&1; then
+      cd "$DOTFILES_DIR"
+      for folder in $STOW_FOLDERS; do
+        prepare_targets "$folder"
+        echo "stow $folder"
+        stow -D "$folder"
+        stow "$folder"
+      done
+    else
+      echo "stow not found; using built-in symlink fallback" >&2
+      for folder in $STOW_FOLDERS; do
+        prepare_targets "$folder"
+        link_with_fallback "$folder"
+      done
+    fi
+  args:
+    executable: /bin/bash
   environment:
     HOME: "/home/{{ user_name }}"
     DOTFILES: "/home/{{ user_name }}/.dotfiles"
