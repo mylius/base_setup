@@ -42,8 +42,12 @@
     - install
     - node
 
-- name: Set npmjs global prefix
-  shell: npm config set prefix '/home/{{ user_name }}/.local/.npm-global'
+- name: Configure npmjs global prefix
+  lineinfile:
+    path: "/home/{{ user_name }}/.npmrc"
+    line: "prefix=/home/{{ user_name }}/.local/.npm-global"
+    create: yes
+    mode: '0644'
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
   tags:
