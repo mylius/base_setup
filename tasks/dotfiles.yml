@@ -65,7 +65,7 @@
 
 - name: Skip .dotfiles update when checkout has local changes
   ansible.builtin.debug:
-    msg: "Skipping .dotfiles update because the checkout has local changes."
+    msg: "Skipping .dotfiles update because the checkout has local changes. Existing dotfiles will be reinstalled, so newer shell fixes from the repo will not apply until this checkout is cleaned up."
   when:
     - dotfiles_dir.stat.exists
     - dotfiles_status.stdout != ""
