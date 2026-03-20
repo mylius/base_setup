@@ -68,7 +68,12 @@
       register: brew_installed
       when: ansible_os_family == "Darwin"
 
-    - include_tasks: tasks/update_sources.yml
+    - include_tasks:
+        file: tasks/update_sources.yml
+        apply:
+          tags:
+            - terminal
+            - install
       tags: 
         - terminal
         - install
@@ -134,37 +139,85 @@
         state: present
       when: ansible_os_family == "Darwin" and brew_installed.stat.exists
 
-    - include_tasks: tasks/ssh.yml
+    - include_tasks:
+        file: tasks/ssh.yml
+        apply:
+          tags:
+            - ssh
       when: bootstrap_ssh | bool
       tags: ssh
 
-    - include_tasks: tasks/git_setup.yml
+    - include_tasks:
+        file: tasks/git_setup.yml
+        apply:
+          tags:
+            - install
       tags: install
 
-    - include_tasks: tasks/cli_tools.yml
+    - include_tasks:
+        file: tasks/cli_tools.yml
+        apply:
+          tags:
+            - install
+            - terminal
       tags:
         - install
         - terminal
 
-    - include_tasks: tasks/nvim.yml
+    - include_tasks:
+        file: tasks/nvim.yml
+        apply:
+          tags:
+            - terminal
       tags: terminal
 
-    - include_tasks: tasks/tmux_setup.yml
+    - include_tasks:
+        file: tasks/tmux_setup.yml
+        apply:
+          tags:
+            - terminal
       tags: terminal
 
-    - include_tasks: tasks/zsh_setup.yml
+    - include_tasks:
+        file: tasks/zsh_setup.yml
+        apply:
+          tags:
+            - terminal
       when: (current_login_shell | default(ansible_env.SHELL | default('/bin/zsh')) | basename) != "bash"
       tags: terminal
 
-    - include_tasks: tasks/bash_setup.yml
+    - include_tasks:
+        file: tasks/bash_setup.yml
+        apply:
+          tags:
+            - terminal
       when: (current_login_shell | default(ansible_env.SHELL | default('/bin/zsh')) | basename) == "bash"
       tags: terminal
 
-    - include_tasks: tasks/dotfiles.yml
-      tags: dotfiles
+    - include_tasks:
+        file: tasks/dotfiles.yml
+        apply:
+          tags:
+            - install
+            - terminal
+            - dotfiles
+            - stow
+      tags:
+        - install
+        - terminal
+        - dotfiles
+        - stow
 
-    - include_tasks: tasks/python.yml
+    - include_tasks:
+        file: tasks/python.yml
+        apply:
+          tags:
+            - py
       tags: py
 
-    - include_tasks: tasks/node.yml
+    - include_tasks:
+        file: tasks/node.yml
+        apply:
+          tags:
+            - node
       tags: node
