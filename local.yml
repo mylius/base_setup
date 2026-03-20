@@ -78,21 +78,35 @@
       command: getent passwd {{ user_name }}
       register: linux_user_entry
       changed_when: false
+      failed_when: false
       when: ansible_os_family != "Darwin"
 
     - name: Detect current login shell on macOS
       command: dscl . -read /Users/{{ user_name }} UserShell
       register: darwin_user_shell
       changed_when: false
+      failed_when: false
       when: ansible_os_family == "Darwin"
 
     - name: Record current login shell
       set_fact:
         current_login_shell: >-
           {{
-            linux_user_entry.stdout.split(':')[-1]
-            if ansible_os_family != 'Darwin'
-            else darwin_user_shell.stdout.split()[-1]
+            (
+              linux_user_entry.stdout.split(':')[-1]
+              if (
+                ansible_os_family != 'Darwin' and
+                (linux_user_entry.stdout | default('')) != ''
+              )
+              else (
+                darwin_user_shell.stdout.split()[-1]
+                if (
+                  ansible_os_family == 'Darwin' and
+                  (darwin_user_shell.stdout | default('')) != ''
+                )
+                else (ansible_env.SHELL | default('/bin/zsh'))
+              )
+            )
           }}
 
   tasks:
@@ -139,11 +153,11 @@
       tags: terminal
 
     - include_tasks: tasks/zsh_setup.yml
-      when: current_login_shell | basename != "bash"
+      when: (current_login_shell | default(ansible_env.SHELL | default('/bin/zsh')) | basename) != "bash"
       tags: terminal
 
     - include_tasks: tasks/bash_setup.yml
-      when: current_login_shell | basename == "bash"
+      when: (current_login_shell | default(ansible_env.SHELL | default('/bin/zsh')) | basename) == "bash"
       tags: terminal
 
     - include_tasks: tasks/dotfiles.yml
