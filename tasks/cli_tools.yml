@@ -10,6 +10,22 @@
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
 
+- name: Check if starship is already installed
+  ansible.builtin.command: starship --version
+  register: starship_installed
+  changed_when: false
+  failed_when: false
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Check if zoxide is already installed
+  ansible.builtin.command: zoxide --version
+  register: zoxide_installed
+  changed_when: false
+  failed_when: false
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
 - name: Install atuin with pacman
   ansible.builtin.pacman:
     name: atuin
@@ -229,13 +245,6 @@
     state: present
   when: ansible_os_family == "Darwin" and brew_installed.stat.exists
 
-- name: Check if starship is already installed on apt-based systems
-  ansible.builtin.command: starship --version
-  register: starship_installed
-  changed_when: false
-  failed_when: false
-  when: ansible_facts.packages.apt is defined
-
 - name: Install starship with official installer on apt-based systems
   ansible.builtin.shell: |
     set -euo pipefail
@@ -244,6 +253,20 @@
     executable: /bin/bash
   when:
     - ansible_facts.packages.apt is defined
+    - starship_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install starship with official installer on other Linux systems
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "{{ cli_install_dir }}"
+  args:
+    executable: /bin/bash
+  when:
+    - ansible_os_family != "Darwin"
+    - ansible_facts.packages.apt is not defined
+    - ansible_facts.packages.pacman is not defined
     - starship_installed.rc != 0
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
@@ -263,13 +286,6 @@
     state: present
   when: ansible_os_family == "Darwin" and brew_installed.stat.exists
 
-- name: Check if zoxide is already installed on apt-based systems
-  ansible.builtin.command: zoxide --version
-  register: zoxide_installed
-  changed_when: false
-  failed_when: false
-  when: ansible_facts.packages.apt is defined
-
 - name: Install zoxide with official installer on apt-based systems
   ansible.builtin.shell: |
     set -euo pipefail
@@ -278,6 +294,20 @@
     executable: /bin/bash
   when:
     - ansible_facts.packages.apt is defined
+    - zoxide_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install zoxide with official installer on other Linux systems
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh -s -- --bin-dir "{{ cli_install_dir }}"
+  args:
+    executable: /bin/bash
+  when:
+    - ansible_os_family != "Darwin"
+    - ansible_facts.packages.apt is not defined
+    - ansible_facts.packages.pacman is not defined
     - zoxide_installed.rc != 0
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
