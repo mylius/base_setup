@@ -309,3 +309,318 @@
     - zoxide_installed.rc != 0
   become: "{{ bootstrap_become | bool }}"
   become_user: "{{ user_name }}"
+
+# Worktrunk - Git worktree manager
+- name: Check if worktrunk is already installed
+  ansible.builtin.command: wt --version
+  register: worktrunk_installed
+  changed_when: false
+  failed_when: false
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install worktrunk with Homebrew
+  homebrew:
+    name: worktrunk
+    state: present
+  when: ansible_os_family == "Darwin" and brew_installed.stat.exists
+
+- name: Fetch latest worktrunk release metadata
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/max-sixty/worktrunk/releases/latest
+    return_content: true
+  register: worktrunk_release
+  when:
+    - ansible_os_family != "Darwin"
+    - worktrunk_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Create temporary directory for worktrunk install
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: worktrunk
+  register: worktrunk_tmpdir
+  when:
+    - ansible_os_family != "Darwin"
+    - worktrunk_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Find worktrunk Linux x86_64 asset URL
+  ansible.builtin.set_fact:
+    worktrunk_asset_url: "{{ worktrunk_release.json.assets | selectattr('name', 'search', 'x86_64.*linux') | map(attribute='browser_download_url') | first }}"
+  when:
+    - ansible_os_family != "Darwin"
+    - worktrunk_installed.rc != 0
+    - ansible_architecture == "x86_64"
+
+- name: Download worktrunk release archive
+  ansible.builtin.get_url:
+    url: "{{ worktrunk_asset_url }}"
+    dest: "{{ worktrunk_tmpdir.path }}/worktrunk.tar.gz"
+    mode: '0644'
+  when:
+    - ansible_os_family != "Darwin"
+    - worktrunk_installed.rc != 0
+    - ansible_architecture == "x86_64"
+    - worktrunk_asset_url is defined
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Extract worktrunk release archive
+  ansible.builtin.unarchive:
+    src: "{{ worktrunk_tmpdir.path }}/worktrunk.tar.gz"
+    dest: "{{ worktrunk_tmpdir.path }}"
+    remote_src: true
+  when:
+    - ansible_os_family != "Darwin"
+    - worktrunk_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Find worktrunk binary in extracted archive
+  ansible.builtin.find:
+    paths: "{{ worktrunk_tmpdir.path }}"
+    patterns: "wt"
+    file_type: file
+    recurse: true
+  register: worktrunk_binary
+  when:
+    - ansible_os_family != "Darwin"
+    - worktrunk_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install worktrunk binary
+  ansible.builtin.copy:
+    src: "{{ worktrunk_binary.files[0].path }}"
+    dest: "{{ cli_install_dir }}/wt"
+    remote_src: true
+    mode: '0755'
+  when:
+    - ansible_os_family != "Darwin"
+    - worktrunk_installed.rc != 0
+    - worktrunk_binary.matched > 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Clean up worktrunk temporary directory
+  ansible.builtin.file:
+    path: "{{ worktrunk_tmpdir.path }}"
+    state: absent
+  when:
+    - ansible_os_family != "Darwin"
+    - worktrunk_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+# Sesh - Tmux session manager
+- name: Check if sesh is already installed
+  ansible.builtin.command: sesh --version
+  register: sesh_installed
+  changed_when: false
+  failed_when: false
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install sesh with Homebrew
+  homebrew:
+    name: sesh
+    state: present
+  when: ansible_os_family == "Darwin" and brew_installed.stat.exists
+
+- name: Fetch latest sesh release metadata
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/joshmedeski/sesh/releases/latest
+    return_content: true
+  register: sesh_release
+  when:
+    - ansible_os_family != "Darwin"
+    - sesh_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Create temporary directory for sesh install
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: sesh
+  register: sesh_tmpdir
+  when:
+    - ansible_os_family != "Darwin"
+    - sesh_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Find sesh Linux x86_64 asset URL
+  ansible.builtin.set_fact:
+    sesh_asset_url: "{{ sesh_release.json.assets | selectattr('name', 'search', 'Linux_x86_64') | map(attribute='browser_download_url') | first }}"
+  when:
+    - ansible_os_family != "Darwin"
+    - sesh_installed.rc != 0
+    - ansible_architecture == "x86_64"
+
+- name: Download sesh release archive
+  ansible.builtin.get_url:
+    url: "{{ sesh_asset_url }}"
+    dest: "{{ sesh_tmpdir.path }}/sesh.tar.gz"
+    mode: '0644'
+  when:
+    - ansible_os_family != "Darwin"
+    - sesh_installed.rc != 0
+    - ansible_architecture == "x86_64"
+    - sesh_asset_url is defined
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Extract sesh release archive
+  ansible.builtin.unarchive:
+    src: "{{ sesh_tmpdir.path }}/sesh.tar.gz"
+    dest: "{{ sesh_tmpdir.path }}"
+    remote_src: true
+  when:
+    - ansible_os_family != "Darwin"
+    - sesh_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Find sesh binary in extracted archive
+  ansible.builtin.find:
+    paths: "{{ sesh_tmpdir.path }}"
+    patterns: "sesh"
+    file_type: file
+    recurse: true
+  register: sesh_binary
+  when:
+    - ansible_os_family != "Darwin"
+    - sesh_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install sesh binary
+  ansible.builtin.copy:
+    src: "{{ sesh_binary.files[0].path }}"
+    dest: "{{ cli_install_dir }}/sesh"
+    remote_src: true
+    mode: '0755'
+  when:
+    - ansible_os_family != "Darwin"
+    - sesh_installed.rc != 0
+    - sesh_binary.matched > 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Clean up sesh temporary directory
+  ansible.builtin.file:
+    path: "{{ sesh_tmpdir.path }}"
+    state: absent
+  when:
+    - ansible_os_family != "Darwin"
+    - sesh_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+# fzf - Fuzzy finder
+- name: Check if fzf is already installed
+  ansible.builtin.command: fzf --version
+  register: fzf_installed
+  changed_when: false
+  failed_when: false
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install fzf with Homebrew
+  homebrew:
+    name: fzf
+    state: present
+  when: ansible_os_family == "Darwin" and brew_installed.stat.exists
+
+- name: Fetch latest fzf release metadata
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/junegunn/fzf/releases/latest
+    return_content: true
+  register: fzf_release
+  when:
+    - ansible_os_family != "Darwin"
+    - fzf_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Create temporary directory for fzf install
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: fzf
+  register: fzf_tmpdir
+  when:
+    - ansible_os_family != "Darwin"
+    - fzf_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Find fzf Linux amd64 asset URL
+  ansible.builtin.set_fact:
+    fzf_asset_url: "{{ fzf_release.json.assets | selectattr('name', 'search', 'linux_amd64') | map(attribute='browser_download_url') | first }}"
+  when:
+    - ansible_os_family != "Darwin"
+    - fzf_installed.rc != 0
+    - ansible_architecture == "x86_64"
+
+- name: Download fzf release archive
+  ansible.builtin.get_url:
+    url: "{{ fzf_asset_url }}"
+    dest: "{{ fzf_tmpdir.path }}/fzf.tar.gz"
+    mode: '0644'
+  when:
+    - ansible_os_family != "Darwin"
+    - fzf_installed.rc != 0
+    - ansible_architecture == "x86_64"
+    - fzf_asset_url is defined
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Extract fzf release archive
+  ansible.builtin.unarchive:
+    src: "{{ fzf_tmpdir.path }}/fzf.tar.gz"
+    dest: "{{ fzf_tmpdir.path }}"
+    remote_src: true
+  when:
+    - ansible_os_family != "Darwin"
+    - fzf_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Find fzf binary in extracted archive
+  ansible.builtin.find:
+    paths: "{{ fzf_tmpdir.path }}"
+    patterns: "fzf"
+    file_type: file
+    recurse: true
+  register: fzf_binary
+  when:
+    - ansible_os_family != "Darwin"
+    - fzf_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Install fzf binary
+  ansible.builtin.copy:
+    src: "{{ fzf_binary.files[0].path }}"
+    dest: "{{ cli_install_dir }}/fzf"
+    remote_src: true
+    mode: '0755'
+  when:
+    - ansible_os_family != "Darwin"
+    - fzf_installed.rc != 0
+    - fzf_binary.matched > 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
+
+- name: Clean up fzf temporary directory
+  ansible.builtin.file:
+    path: "{{ fzf_tmpdir.path }}"
+    state: absent
+  when:
+    - ansible_os_family != "Darwin"
+    - fzf_installed.rc != 0
+  become: "{{ bootstrap_become | bool }}"
+  become_user: "{{ user_name }}"
